@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grainhold — Grain Match</title>
+<style>
+  :root{
+    --bg:#0f1410;
+    --panel:#171d17;
+    --panel-2:#1e251d;
+    --border:#3a4636;
+    --gold:#d9b054;
+    --text:#e7e6df;
+    --muted:#9aa494;
+    --accent:#7fae5c;
+    --wheat:#d9b054;
+    --corn:#e8a23d;
+    --rice:#e8e2d0;
+    --oats:#8a5a2a;
+    --barley:#5f8f4a;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Georgia', 'Iowan Old Style', serif;
+    background:radial-gradient(circle at 50% 0%, #1a211a, var(--bg));
+    color:var(--text);
+    min-height:100vh;
+  }
+  header{
+    padding:18px 24px;
+    border-bottom:1px solid var(--border);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:12px;
+  }
+  header h1{
+    margin:0;
+    font-size:1.6rem;
+    letter-spacing:0.12em;
+    color:var(--accent);
+  }
+  header .sub{
+    font-size:0.8rem;
+    color:var(--muted);
+    letter-spacing:0.05em;
+  }
+  .stats{
+    display:flex;
+    gap:18px;
+    font-size:0.95rem;
+  }
+  .stat{
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    padding:6px 12px;
+    border-radius:6px;
+    min-width:70px;
+    text-align:center;
+  }
+  .stat span{display:block; font-size:1.1rem; font-weight:bold;}
+  .stat.gold span{color:var(--gold);}
+  .stat.combo span{color:var(--accent);}
+
+  main{
+    display:flex;
+    gap:20px;
+    padding:20px;
+    flex-wrap:wrap;
+    align-items:flex-start;
+    justify-content:center;
+  }
+
+  #board-wrap{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:14px;
+  }
+  #board-title{
+    font-size:0.85rem;
+    color:var(--muted);
+    margin-bottom:10px;
+    letter-spacing:0.04em;
+  }
+  #board{
+    display:grid;
+    gap:4px;
+  }
+  .tile{
+    width:40px;
+    height:40px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:22px;
+    border-radius:8px;
+    cursor:pointer;
+    user-select:none;
+    transition:transform 0.12s ease, box-shadow 0.12s ease;
+    position:relative;
+    border:1px solid rgba(0,0,0,0.25);
+  }
+  .tile:hover{ transform:scale(1.06); }
+  .tile.selected{
+    outline:3px solid var(--gold);
+    outline-offset:1px;
+    transform:scale(1.08);
+    z-index:2;
+  }
+  .tile.clearing{
+    animation:pop 0.25s ease forwards;
+  }
+  .tile.falling{
+    animation:drop 0.2s ease;
+  }
+  @keyframes pop{
+    0%{ transform:scale(1); opacity:1; }
+    100%{ transform:scale(0.2); opacity:0; }
+  }
+  @keyframes drop{
+    0%{ transform:translateY(-14px); opacity:0.5; }
+    100%{ transform:translateY(0); opacity:1; }
+  }
+  .tile.wheat{ background:var(--wheat); color:#3a2c0e; }
+  .tile.corn{ background:var(--corn); color:#3a2200; }
+  .tile.rice{ background:var(--rice); color:#3a3626; }
+  .tile.oats{ background:var(--oats); color:#f2ede1; }
+  .tile.barley{ background:var(--barley); color:#132b0a; }
+
+  aside{
+    width:300px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:16px;
+  }
+  .panel h3{
+    margin:0 0 10px 0;
+    font-size:0.95rem;
+    color:var(--accent);
+    letter-spacing:0.04em;
+    border-bottom:1px solid var(--border);
+    padding-bottom:8px;
+  }
+  .panel p{
+    font-size:0.85rem;
+    color:var(--muted);
+    line-height:1.5;
+    margin:6px 0;
+  }
+  .legend{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    font-size:0.8rem;
+  }
+  .legend .row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    justify-content:flex-start;
+  }
+  .legend .swatch{
+    width:22px;height:22px;border-radius:6px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:14px;
+  }
+  button{
+    font-family:inherit;
+    background:var(--accent);
+    color:#0f1410;
+    font-weight:bold;
+    border:none;
+    border-radius:6px;
+    padding:9px 12px;
+    font-size:0.85rem;
+    cursor:pointer;
+    width:100%;
+    margin-top:8px;
+    transition:filter 0.1s ease;
+  }
+  button:hover{ filter:brightness(1.1); }
+  button.secondary{
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    color:var(--text);
+    font-weight:normal;
+  }
+  #log{
+    max-height:160px;
+    overflow-y:auto;
+    font-size:0.78rem;
+    color:var(--muted);
+    display:flex;
+    flex-direction:column-reverse;
+    gap:4px;
+  }
+  #log div{border-bottom:1px dashed var(--border); padding-bottom:4px;}
+  footer{
+    text-align:center;
+    font-size:0.72rem;
+    color:var(--muted);
+    padding:16px;
+  }
+
+  .addr-chip{
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    padding:6px 12px;
+    border-radius:6px;
+    font-size:0.8rem;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .addr-chip .dot{
+    width:8px;height:8px;border-radius:50%;
+    background:var(--accent);
+    display:inline-block;
+  }
+  .addr-chip button{
+    width:auto;
+    margin:0;
+    padding:3px 8px;
+    font-size:0.7rem;
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--muted);
+    font-weight:normal;
+  }
+
+  #wallet-widget{
+    position:relative;
+  }
+  #wallet-dropdown{
+    display:none;
+    position:absolute;
+    top:calc(100% + 8px);
+    left:0;
+    width:300px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:16px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.4);
+    z-index:50;
+  }
+  #wallet-dropdown.open{ display:block; }
+  #wallet-dropdown p{ font-size:0.8rem; color:var(--muted); line-height:1.5; margin-top:0; }
+  #wallet-dropdown input{
+    width:100%;
+    font-family:inherit;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:9px 10px;
+    border-radius:6px;
+    font-size:0.85rem;
+    margin-top:6px;
+  }
+  #addr-error{
+    color:#c9877a;
+    font-size:0.75rem;
+    min-height:1em;
+    margin-top:6px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div id="wallet-widget">
+    <div class="addr-chip" id="addr-chip" style="display:none;">
+      <span class="dot"></span>
+      <span id="addr-display"></span>
+      <button id="btn-disconnect">Switch</button>
+    </div>
+    <button id="btn-wallet-toggle" class="secondary">Connect Wallet</button>
+    <div id="wallet-dropdown">
+      <p>Enter your EVM address to keep your gold under it. This is a prototype —
+         no real wallet, funds, or on-chain transaction is involved.</p>
+      <input id="addr-input" type="text" placeholder="0x1234...abcd" maxlength="42" autocomplete="off" spellcheck="false">
+      <div id="addr-error"></div>
+      <button id="btn-use-address" class="secondary">Use this address</button>
+    </div>
+  </div>
+  <div>
+    <h1>GRAINHOLD</h1>
+    <div class="sub">Match grains · earn gold · frontier harvest</div>
+  </div>
+  <div class="stats">
+    <div class="stat gold"><span id="stat-gold">0</span>Gold</div>
+    <div class="stat"><span id="stat-matches">0</span>Matches</div>
+    <div class="stat combo"><span id="stat-best-combo">0</span>Best Combo</div>
+  </div>
+</header>
+
+<main>
+  <div id="board-wrap">
+    <div id="board-title">Grain Silo — swap adjacent grains to line up 3 or more</div>
+    <div id="board"></div>
+  </div>
+
+  <aside>
+    <div class="panel">
+      <h3>Grain Types</h3>
+      <div class="legend">
+        <div class="row"><span class="swatch wheat">🌾</span> Wheat</div>
+        <div class="row"><span class="swatch corn">🌽</span> Corn</div>
+        <div class="row"><span class="swatch rice">🍚</span> Rice</div>
+        <div class="row"><span class="swatch oats">🌰</span> Oats</div>
+        <div class="row"><span class="swatch barley">🌿</span> Barley</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>How to Play</h3>
+      <p>Click a grain, then click a neighboring grain to swap them. Line up 3 or more of the
+         same grain in a row or column to clear them and earn gold. Bigger matches and chain
+         reactions ("combos") pay out more.</p>
+      <button id="btn-reset" class="secondary">Reshuffle Board</button>
+    </div>
+
+    <div class="panel">
+      <h3>Log</h3>
+      <div id="log"></div>
+    </div>
+  </aside>
+</main>
+
+<footer>Grainhold prototype · progress autosaves per connected address</footer>
+
+<script>
+(function(){
+  const SIZE = 8;
+  const IDENTITY_KEY = 'grainhold-identity-v1';
+  const GRAIN_TYPES = ['wheat','corn','rice','oats','barley'];
+  const GRAIN_SYMBOL = { wheat:'🌾', corn:'🌽', rice:'🍚', oats:'🌰', barley:'🌿' };
+  const REWARD_PER_TILE = 5;
+
+  function saveKeyFor(identity){
+    return 'grainhold-match-v1:' + identity.toLowerCase();
+  }
+  function isValidEvmAddress(addr){
+    return /^0x[a-fA-F0-9]{40}$/.test(addr.trim());
+  }
+  function shortAddr(addr){
+    return addr.slice(0,6) + '…' + addr.slice(-4);
+  }
+  function randomType(){
+    return GRAIN_TYPES[Math.floor(Math.random()*GRAIN_TYPES.length)];
+  }
+
+  let SAVE_KEY = null;
+  let state = null;
+  let selected = null; // {r,c}
+  let busy = false; // true while resolving matches, blocks input
+
+  function inBounds(r,c){ return r>=0 && r<SIZE && c>=0 && c<SIZE; }
+
+  function makeFreshBoard(){
+    const grid = [];
+    for(let r=0;r<SIZE;r++){
+      const row=[];
+      for(let c=0;c<SIZE;c++){
+        let t;
+        do{
+          t = randomType();
+        } while(
+          (c>=2 && row[c-1]===t && row[c-2]===t) ||
+          (r>=2 && grid[r-1][c]===t && grid[r-2][c]===t)
+        );
+        row.push(t);
+      }
+      grid.push(row);
+    }
+    return grid;
+  }
+
+  function freshState(){
+    return {
+      gold: 0,
+      matches: 0,
+      bestCombo: 0,
+      grid: makeFreshBoard()
+    };
+  }
+
+  function save(){
+    if(!SAVE_KEY || !state) return;
+    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+  }
+  function load(){
+    if(!SAVE_KEY) return null;
+    try{
+      const raw = localStorage.getItem(SAVE_KEY);
+      if(!raw) return null;
+      const parsed = JSON.parse(raw);
+      if(!parsed.grid || !Array.isArray(parsed.grid)) return null;
+      return parsed;
+    }catch(e){ return null; }
+  }
+
+  function log(msg){
+    const el = document.getElementById('log');
+    const line = document.createElement('div');
+    line.textContent = msg;
+    el.appendChild(line);
+    while(el.children.length>60) el.removeChild(el.firstChild);
+  }
+
+  function render(){
+    const board = document.getElementById('board');
+    board.style.gridTemplateColumns = `repeat(${SIZE}, 40px)`;
+    board.innerHTML='';
+    for(let r=0;r<SIZE;r++){
+      for(let c=0;c<SIZE;c++){
+        const type = state.grid[r][c];
+        const div = document.createElement('div');
+        div.className = 'tile ' + (type || '');
+        if(type) div.textContent = GRAIN_SYMBOL[type];
+        if(selected && selected.r===r && selected.c===c) div.classList.add('selected');
+        div.addEventListener('click', ()=> onTileClick(r,c));
+        board.appendChild(div);
+      }
+    }
+    document.getElementById('stat-gold').textContent = state.gold;
+    document.getElementById('stat-matches').textContent = state.matches;
+    document.getElementById('stat-best-combo').textContent = state.bestCombo;
+    save();
+  }
+
+  function onTileClick(r,c){
+    if(busy) return;
+    if(!selected){
+      selected = {r,c};
+      render();
+      return;
+    }
+    if(selected.r===r && selected.c===c){
+      selected = null;
+      render();
+      return;
+    }
+    const adjacent = (Math.abs(selected.r-r)+Math.abs(selected.c-c))===1;
+    if(!adjacent){
+      selected = {r,c};
+      render();
+      return;
+    }
+    attemptSwap(selected.r, selected.c, r, c);
+  }
+
+  function swapCells(r1,c1,r2,c2){
+    const tmp = state.grid[r1][c1];
+    state.grid[r1][c1] = state.grid[r2][c2];
+    state.grid[r2][c2] = tmp;
+  }
+
+  function findRuns(grid){
+    const runs = [];
+    // horizontal
+    for(let r=0;r<SIZE;r++){
+      let c=0;
+      while(c<SIZE){
+        const t = grid[r][c];
+        if(!t){ c++; continue; }
+        let len=1;
+        while(c+len<SIZE && grid[r][c+len]===t) len++;
+        if(len>=3){
+          const cells=[];
+          for(let k=0;k<len;k++) cells.push([r,c+k]);
+          runs.push({cells});
+        }
+        c+=len;
+      }
+    }
+    // vertical
+    for(let c=0;c<SIZE;c++){
+      let r=0;
+      while(r<SIZE){
+        const t = grid[r][c];
+        if(!t){ r++; continue; }
+        let len=1;
+        while(r+len<SIZE && grid[r+len][c]===t) len++;
+        if(len>=3){
+          const cells=[];
+          for(let k=0;k<len;k++) cells.push([r+k,c]);
+          runs.push({cells});
+        }
+        r+=len;
+      }
+    }
+    return runs;
+  }
+
+  function applyGravity(grid){
+    for(let c=0;c<SIZE;c++){
+      const values=[];
+      for(let r=0;r<SIZE;r++){
+        if(grid[r][c]!==null) values.push(grid[r][c]);
+      }
+      const missing = SIZE - values.length;
+      const fresh=[];
+      for(let i=0;i<missing;i++) fresh.push(randomType());
+      const merged = fresh.concat(values);
+      for(let r=0;r<SIZE;r++) grid[r][c] = merged[r];
+    }
+  }
+
+  function wouldMatchAfterSwap(r1,c1,r2,c2){
+    swapCells(r1,c1,r2,c2);
+    const runs = findRuns(state.grid);
+    swapCells(r1,c1,r2,c2); // revert
+    return runs.length>0;
+  }
+
+  function hasAnyMove(){
+    for(let r=0;r<SIZE;r++){
+      for(let c=0;c<SIZE;c++){
+        if(c+1<SIZE && wouldMatchAfterSwap(r,c,r,c+1)) return true;
+        if(r+1<SIZE && wouldMatchAfterSwap(r,c,r+1,c)) return true;
+      }
+    }
+    return false;
+  }
+
+  function attemptSwap(r1,c1,r2,c2){
+    swapCells(r1,c1,r2,c2);
+    const runs = findRuns(state.grid);
+    if(runs.length===0){
+      // invalid move — revert
+      swapCells(r1,c1,r2,c2);
+      selected = null;
+      log('No match — move undone.');
+      render();
+      return;
+    }
+    selected = null;
+    busy = true;
+    render();
+    resolveCascades();
+  }
+
+  function resolveCascades(){
+    let cascadeStep = 1;
+    function step(){
+      const runs = findRuns(state.grid);
+      if(runs.length===0){
+        if(cascadeStep-1 > state.bestCombo) state.bestCombo = cascadeStep-1;
+        busy = false;
+        render();
+        return;
+      }
+      const cellsToClear = new Set();
+      let stepReward = 0;
+      runs.forEach(run=>{
+        const len = run.cells.length;
+        const base = len*REWARD_PER_TILE + (len>3 ? (len-3)*10 : 0);
+        stepReward += base;
+        run.cells.forEach(([r,c])=> cellsToClear.add(r+','+c));
+      });
+      const multiplier = 1 + 0.25*(cascadeStep-1);
+      stepReward = Math.round(stepReward*multiplier);
+      state.gold += stepReward;
+      state.matches += runs.length;
+      if(cascadeStep>1){
+        log(`Combo x${cascadeStep}! Cleared ${cellsToClear.size} grains — +${stepReward} gold`);
+      } else {
+        log(`Matched ${cellsToClear.size} grains — +${stepReward} gold`);
+      }
+      cellsToClear.forEach(key=>{
+        const [r,c] = key.split(',').map(Number);
+        state.grid[r][c] = null;
+      });
+      render();
+      applyGravity(state.grid);
+      render();
+      cascadeStep++;
+      setTimeout(step, 220);
+    }
+    step();
+  }
+
+  function reshuffle(){
+    state.grid = makeFreshBoard();
+    selected = null;
+    log('Board reshuffled.');
+    render();
+  }
+
+  document.getElementById('btn-reset').addEventListener('click', ()=>{
+    if(!confirm('Reshuffle the board? Your gold and stats are kept.')) return;
+    reshuffle();
+  });
+
+  // --- Identity handling ---
+  const ANON_KEY = 'anonymous';
+  const walletToggle = document.getElementById('btn-wallet-toggle');
+  const walletDropdown = document.getElementById('wallet-dropdown');
+  const addrChip = document.getElementById('addr-chip');
+  const addrDisplay = document.getElementById('addr-display');
+  const addrInput = document.getElementById('addr-input');
+  const addrError = document.getElementById('addr-error');
+
+  function startGameFor(identity){
+    SAVE_KEY = saveKeyFor(identity);
+    state = load() || freshState();
+    selected = null;
+    busy = false;
+    if(identity === ANON_KEY){
+      localStorage.removeItem(IDENTITY_KEY);
+      addrChip.style.display = 'none';
+      walletToggle.style.display = 'block';
+    } else {
+      localStorage.setItem(IDENTITY_KEY, identity);
+      addrChip.style.display = 'flex';
+      addrDisplay.textContent = shortAddr(identity);
+      walletToggle.style.display = 'none';
+      log(`Silo opened for ${shortAddr(identity)}.`);
+    }
+    if(!hasAnyMove()){
+      state.grid = makeFreshBoard();
+      log('No moves were available — board reshuffled.');
+    }
+    render();
+  }
+
+  function closeDropdown(){ walletDropdown.classList.remove('open'); }
+
+  walletToggle.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    walletDropdown.classList.toggle('open');
+  });
+
+  document.addEventListener('click', (e)=>{
+    if(!document.getElementById('wallet-widget').contains(e.target)) closeDropdown();
+  });
+
+  document.getElementById('btn-use-address').addEventListener('click', ()=>{
+    const val = addrInput.value.trim();
+    if(!isValidEvmAddress(val)){
+      addrError.textContent = 'Enter a valid EVM address (0x followed by 40 hex characters).';
+      return;
+    }
+    addrError.textContent = '';
+    startGameFor(val);
+    closeDropdown();
+  });
+
+  addrInput.addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter') document.getElementById('btn-use-address').click();
+  });
+
+  document.getElementById('btn-disconnect').addEventListener('click', (e)=>{
+    e.stopPropagation();
+    addrInput.value = '';
+    startGameFor(ANON_KEY);
+  });
+
+  const existing = localStorage.getItem(IDENTITY_KEY);
+  startGameFor(existing && isValidEvmAddress(existing) ? existing : ANON_KEY);
+})();
+</script>
+
+</body>
+</html>
